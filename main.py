@@ -6,6 +6,7 @@ import shutil
 
 SYSTEM_DIR = "ccc_system"
 USER_FILE = os.path.join(SYSTEM_DIR, "users.json")
+command_prompt = f" {SYSTEM_DIR}> "
 
 if not os.path.exists(SYSTEM_DIR):
     os.mkdir(SYSTEM_DIR)
@@ -220,7 +221,7 @@ while running:
             print("Type 'exit' to shut down. Type 'help' for help.")
 
             while True:
-                command = input("ccc> ").strip()
+                command = input(f"{user_name}@ccc:{f'/{_current_dir}' or '/'}> ").strip()
 
                 if command == "exit":
                     print("Shutting down the program...")
