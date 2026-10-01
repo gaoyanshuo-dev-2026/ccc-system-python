@@ -11,6 +11,7 @@ if not os.path.exists(SYSTEM_DIR):
     os.mkdir(SYSTEM_DIR)
     print(f"已创建专属系统文件夹: {SYSTEM_DIR}")
 
+USER_FILE = os.path.abspath(os.path.join(SYSTEM_DIR, "users.json"))
 
 def load_users():
     if os.path.exists(USER_FILE):
@@ -199,11 +200,11 @@ user_list = load_users()
 while running:
     try:
         print("\nHello, I am ccc.")
-        user_name = input("Enter your username: ")
-        user_password = input("Enter your password: ")
+        user_name = input("请输入您的用户名: ")
+        user_password = input("请输入您的密码: ")
 
         if user_name in user_list and user_list[user_name] == user_password:
-            print("Login successful!")
+            print("登录成功！")
 
             spinner = ['|', '/', '-', '\\']
             for i in range(15):
@@ -212,7 +213,7 @@ while running:
                 time.sleep(0.3)
             print('\r欢迎进入 ccc 系统！          ')
 
-            os.chdir(SYSTEM_DIR)
+            os.chdir(os.path.abspath(SYSTEM_DIR))
             _ROOT_ABS = os.path.abspath(".")
             _current_dir = ""
             print(f"Welcome, {user_name}! 当前目录: {os.getcwd()}")
@@ -272,6 +273,14 @@ while running:
                         user_list = load_users()
                     else:
                         print("用法: add_user <用户名> <密码>")
+
+                elif command == "":
+                    continue
+
+                elif command == "rest":
+                    os.chdir("..")
+                    break
+                    
                 else:
                     print(f"未知命令: {command}")
 
@@ -287,6 +296,8 @@ while running:
     except KeyboardInterrupt:
         input("\n程序已中断，正在退出...")
         running = False
+        os.chdir("..")
+        
     except Exception as e:
         print(f"发生错误: {e}")
         input("按任意键继续...")
