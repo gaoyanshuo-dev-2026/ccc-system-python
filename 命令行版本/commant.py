@@ -7,7 +7,7 @@ import json
 # 例如：如果变量还在 main.py 里且无法移动，这里会再次面临循环导入问题。
 # 强烈建议按照之前的建议，将全局变量提取到 state.py
 try:
-    from state import (
+    from .state import (
         _current_dir, 
         _ROOT_ABS, 
         SYSTEM_DIR, 

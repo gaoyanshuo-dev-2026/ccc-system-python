@@ -5,7 +5,7 @@ import json
 
 # 尝试以包模式导入，如果失败则尝试直接导入（兼容直接运行 python main.py 的情况）
 try:
-    from state import (
+    from .state import (
         SYSTEM_DIR, 
         USER_FILE, 
         _ROOT_ABS, 
