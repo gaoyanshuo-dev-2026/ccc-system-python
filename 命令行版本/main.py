@@ -4,8 +4,6 @@ import time
 import json
 import shutil
 
-# ===== 内测版本标记 =====
-VERSION = "1.0.7-alpha"
 SYSTEM_DIR = "ccc_system"
 USER_FILE = os.path.join(SYSTEM_DIR, "System", "users.json")
 
@@ -208,8 +206,6 @@ def main():
 
     while running:
         print("\n===== ccc 系统登录 =====")
-        print(f"版本：{VERSION} | 【内部测试 0.x.x 开发版】")
-        print("⚠️ 内测版：全局共享文件系统，无用户目录隔离\n")
         user_name = input("请输入您的用户名: ").strip()
         user_password = input("请输入您的密码: ").strip()
 
@@ -220,7 +216,7 @@ def main():
                 sys.stdout.write(f'\r正在进入系统 {spinner[i % 4]}')
                 sys.stdout.flush()
                 time.sleep(0.3)
-            print(f'\r🎉 欢迎进入 ccc 系统 | v{VERSION}            ')
+            print(f'\r🎉 欢迎进入 ccc 系统 |             ')
 
             # 登录之后：固定根，当前路径重置到 /
             _current_dir = ""
@@ -305,5 +301,5 @@ if __name__ == "__main__":
         print("\n\n⚠️ 程序被手动中断，退出")
     except Exception as e:
         print(f"\n💥 全局异常: {e}")
-        print(f"版本 {VERSION} 捕获异常：", e)
+        print(f"捕获异常：", e)
         input("按回车关闭窗口")
