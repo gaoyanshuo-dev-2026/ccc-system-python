@@ -1,8 +1,8 @@
 # ccc-system-python
 A mini CCC OS developed in Python
 
-**lang zh 5 ~ 29**
-**lang en 32 ~ 57**
+**lang zh 4 ~ 23**
+**lang en 24 ~ 44**
 ## 功能
 
 - 用户登录/注册
@@ -11,8 +11,10 @@ A mini CCC OS developed in Python
 
 ## 快速开始
 
+*准备工作：进入仓库上级仓库，如：C:/CCC-OS/。而非C:/CCC-OS/仓库名*
+
 ```bash
-python main.py
+python -m 命令行版本.main
 ```
 ## 可用命令
 
@@ -26,7 +28,8 @@ python main.py
 | `write <文件> <内容>` | 写入文件 |
 | `rm <文件/目录>` | 删除 |
 | `add_user <用户名> <密码>` | 添加用户 |
-| `rest` | 返回登录界面 |
+| `logout` | 返回登录界面 |
+| `clear` | 清屏 |
 | `exit` | 退出程序 |
 
 ## Features
@@ -37,8 +40,10 @@ python main.py
 
 ## Quick Start
 
+*Preparatory work: enter the parent warehouse, such as: C:/CCC-OS/. Do not enter C:/CCC-OS/warehouse name*
+
 ```bash
-python main.py
+python -m 命令行版本.main
 ```
 
 ## Available Commands
@@ -53,6 +58,7 @@ python main.py
 | `write <file> <content>` | Write content to a file |
 | `rm <file/dir>` | Delete a file or directory |
 | `add_user <username> <password>` | Add a new user |
-| `rest` | Return to the login screen |
+| `logout` | Return to the login screen |
+| `clear` | Clear screen |
 | `exit` | Exit the program |
 
