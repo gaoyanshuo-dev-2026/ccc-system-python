@@ -2,7 +2,7 @@
 A mini CCC OS developed in Python
 
 **lang zh 4 ~ 23**
-**lang en 24 ~ 44**
+**lang en 24 ~ 42**
 ## 功能
 
 - 用户登录/注册
