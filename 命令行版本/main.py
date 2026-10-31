@@ -2,304 +2,219 @@ import os
 import sys
 import time
 import json
-import shutil
 
-SYSTEM_DIR = "ccc_system"
-USER_FILE = os.path.join(SYSTEM_DIR, "System", "users.json")
+# 尝试以包模式导入，如果失败则尝试直接导入（兼容直接运行 python main.py 的情况）
+try:
+    from state import (
+        SYSTEM_DIR, 
+        USER_FILE, 
+        _ROOT_ABS, 
+        load_users, 
+        save_users,
+        _current_dir
+    )
+    from . import commant
+except ImportError:
+    import state
+    from state import (
+        SYSTEM_DIR, 
+        USER_FILE, 
+        _ROOT_ABS, 
+        load_users, 
+        save_users,
+        _current_dir
+    )
+    import commant
 
-# 初始化系统目录
-if not os.path.exists(SYSTEM_DIR):
-    os.mkdir(SYSTEM_DIR)
-    os.mkdir(os.path.join(SYSTEM_DIR, "Users"))
-    os.mkdir(os.path.join(SYSTEM_DIR, "System"))
-    print(f"✅ 已创建专属系统文件夹: {SYSTEM_DIR}")
+def init_system():
+    """
+    初始化系统目录结构。
+    如果 ccc_system 文件夹不存在，则创建基础结构。
+    """
+    if not os.path.exists(SYSTEM_DIR):
+        os.mkdir(SYSTEM_DIR)
+        os.mkdir(os.path.join(SYSTEM_DIR, "Users"))
+        os.mkdir(os.path.join(SYSTEM_DIR, "System"))
+        print(f"✅ 已创建专属系统文件夹: {SYSTEM_DIR}")
+    
+    # 确保全局根路径是绝对路径且最新
+    global _ROOT_ABS
+    _ROOT_ABS = os.path.abspath(SYSTEM_DIR)
 
-USER_FILE = os.path.abspath(os.path.join(SYSTEM_DIR, "System", "users.json"))
-# 固定全局根：整个文件系统都在 SYSTEM_DIR 里面
-_ROOT_ABS = os.path.abspath(SYSTEM_DIR)
-_current_dir = ""
+def show_loading_animation(duration=1.5):
+    """显示简单的加载动画"""
+    spinner = ['|', '/', '-', '\\']
+    end_time = time.time() + duration
+    while time.time() < end_time:
+        for char in spinner:
+            sys.stdout.write(f'\r正在进入系统 {char}')
+            sys.stdout.flush()
+            time.sleep(0.1)
+    print('\r🎉 欢迎进入 ccc system!             ')
 
-
-def load_users():
-    if os.path.exists(USER_FILE):
-        with open(USER_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    else:
-        default_users = {"Admin": "ccc"}
-        save_users(default_users)
-        user_folder = os.path.join(SYSTEM_DIR, "Users", "Admin")
-        if not os.path.exists(user_folder):
-            os.mkdir(user_folder)
-        return default_users
-
-
-def save_users(users):
-    with open(USER_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
-
-
-def cmd_add_user(username, password):
-    users = load_users()
-    if username in users or username in ("exit", "help", "ls", "cd", "touch", "cat", "write", "mkdir", "rm", "add_user", "logout"):
-        print(f"❌ 用户 '{username}' 已存在，或者是保留命令，无法添加")
-        return
-    users[username] = password
-    save_users(users)
-    user_folder = os.path.join(SYSTEM_DIR, "Users", username)
-    if not os.path.exists(user_folder):
-        os.mkdir(user_folder)
-    print(f"✅ 已添加新用户: {username}")
-
-
-def _current_path():
-    """返回当前虚拟目录对应的物理绝对路径，根是 ccc_system"""
-    if _current_dir:
-        return os.path.join(_ROOT_ABS, *_current_dir.split("/"))
-    return _ROOT_ABS
-
-
-def _resolve_path(name):
-    """解析路径，只禁止跳出 _ROOT_ABS（ccc_system），内部随便走"""
-    target = os.path.join(_current_path(), name)
-    real = os.path.normpath(target)
-    # 关键：不能跑到 ccc_system 外面
-    if not real.startswith(_ROOT_ABS):
-        return None
-    return real
-
-
-def cmd_ls():
-    path = _current_path()
-    try:
-        files = os.listdir(path)
-    except PermissionError:
-        print("❌ 权限不足，无法列出此目录")
-        return
-    if not files:
-        print("（空文件夹）")
-    else:
-        for f in sorted(files):
-            full = os.path.join(path, f)
-            if os.path.isdir(full):
-                print(f"📁 {f}/")
-            else:
-                print(f"📄 {f}")
-
-
-def cmd_touch(filename):
-    path = _resolve_path(filename)
-    if path is None:
-        print("❌ 非法路径（不能访问系统外部）")
-        return
-    if os.path.exists(path):
-        print(f"⚠️ 文件 '{filename}' 已存在")
-    else:
-        with open(path, "w", encoding="utf-8") as f:
-            pass
-        print(f"✅ 已创建文件: {filename}")
-
-
-def cmd_cat(filename):
-    path = _resolve_path(filename)
-    if path is None:
-        print("❌ 非法路径（不能访问系统外部）")
-        return
-    if not os.path.exists(path):
-        print(f"❌ 文件 '{filename}' 不存在")
-    elif os.path.isdir(path):
-        print(f"❌ '{filename}' 是一个文件夹")
-    else:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-            if content:
-                print(content)
-            else:
-                print("（空文件）")
-
-
-def cmd_write(filename, text):
-    path = _resolve_path(filename)
-    if path is None:
-        print("❌ 非法路径（不能访问系统外部）")
-        return
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
-    print(f"✅ 已写入 {len(text)} 个字符到 '{filename}'")
-
-
-def cmd_rm(filename):
-    path = _resolve_path(filename)
-    if path is None:
-        print("❌ 非法路径（不能访问系统外部）")
-        return
-    if not os.path.exists(path):
-        print(f"❌ '{filename}' 不存在")
-    else:
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-            print(f"✅ 已删除文件夹: {filename}")
-        else:
-            os.remove(path)
-            print(f"✅ 已删除文件: {filename}")
-
-
-def cmd_mkdir(filename):
-    path = _resolve_path(filename)
-    if path is None:
-        print("❌ 非法路径（不能访问系统外部）")
-        return
-    if os.path.exists(path):
-        print(f"⚠️ 文件夹 '{filename}' 已存在")
-    else:
-        os.makedirs(path, exist_ok=True)
-        print(f"✅ 已创建文件夹: {filename}")
-
-
-def cmd_cd(dirname):
-    global _current_dir
-    if dirname == "..":
-        parts = _current_dir.rstrip("/").split("/")
-        if not _current_dir or len(parts) <= 1:
-            print("⚠️ 已经在根目录了")
-            return
-        _current_dir = "/".join(parts[:-1])
-        print(f"✅ 已切换到: /{_current_dir}")
-        return
-
-    resolved = _resolve_path(dirname)
-    if resolved is None:
-        print("❌ 无法切换到该目录（非法路径）")
-        return
-    if not os.path.isdir(resolved):
-        print(f"❌ 文件夹 '{dirname}' 不存在")
-        return
-    # 转成相对于根的虚拟路径
-    rel = os.path.relpath(resolved, _ROOT_ABS)
-    if rel == ".":
-        _current_dir = ""
-    else:
-        _current_dir = rel
-    print(f"✅ 已切换到文件夹: {dirname}/")
-
-
-def cmd_help():
-    print("📋 可用命令：")
-    print(f"  {'ls':<15}\t- 列出文件")
-    print(f"  {'touch':<15}\t- 创建文件")
-    print(f"  {'cat':<15}\t- 查看文件内容")
-    print(f"  {'write':<15}\t- 写入文件")
-    print(f"  {'rm':<15}\t- 删除文件/文件夹")
-    print(f"  {'mkdir':<15}\t- 创建文件夹")
-    print(f"  {'cd':<15}\t- 切换目录（支持 cd ..）")
-    print(f"  {'add_user':<15}\t- 添加用户【内测：所有用户可用】")
-    print(f"  {'logout':<15}\t- 退出回到登录界面")
-    print(f"  {'exit':<15}\t- 完全关闭程序")
-    print(f"  {'help':<15}\t- 显示帮助")
-    print("\n⚠️ 提示：当前为内部测试版，无目录隔离，所有用户共享文件树，功能可能存在BUG！")
-
-
-# ========== 主程序 ==========
-def main():
-    global _current_dir
-    running = True
-    user_list = load_users()
-
-    while running:
+def handle_login():
+    """
+    处理用户登录逻辑。
+    返回: 成功登录的用户名 (str)，如果用户选择退出则返回 None
+    """
+    while True:
         print("\n===== ccc 系统登录 =====")
         user_name = input("请输入您的用户名: ").strip()
         user_password = input("请输入您的密码: ").strip()
 
+        if not user_name or not user_password:
+            print("❌ 用户名和密码不能为空")
+            continue
+
+        # 每次登录时重新加载用户列表，确保数据最新
+        user_list = load_users()
+        
         if user_name in user_list and user_list[user_name] == user_password:
             print("✅ 登录成功！")
-            spinner = ['|', '/', '-', '\\']
-            for i in range(15):
-                sys.stdout.write(f'\r正在进入系统 {spinner[i % 4]}')
-                sys.stdout.flush()
-                time.sleep(0.3)
-            print(f'\r🎉 欢迎进入 ccc 系统 |             ')
-
-            # 登录之后：固定根，当前路径重置到 /
-            _current_dir = ""
-            print(f"Welcome, {user_name}! 系统根目录: {_ROOT_ABS}")
-            print("输入 'logout' 返回登录页，'exit' 关闭程序，'help' 查看命令\n")
-
-            shell_loop = True
-            while shell_loop:
-                prompt_path = f"/{_current_dir}" if _current_dir else "/"
-                command = input(f"{user_name}@ccc:{prompt_path}> ").strip()
-
-                if command == "exit":
-                    print("👋 Shutting down the program...")
-                    running = False
-                    shell_loop = False
-
-                elif command == "logout":
-                    print("📤 登出，返回登录页面...")
-                    _current_dir = ""
-                    shell_loop = False
-
-                elif command == "help":
-                    cmd_help()
-                elif command == "ls":
-                    cmd_ls()
-                elif command.startswith("touch "):
-                    filename = command[6:].strip()
-                    if filename:
-                        cmd_touch(filename)
-                    else:
-                        print("用法: touch <文件名>")
-                elif command.startswith("cat "):
-                    filename = command[4:].strip()
-                    if filename:
-                        cmd_cat(filename)
-                    else:
-                        print("用法: cat <文件名>")
-                elif command.startswith("write "):
-                    parts = command[6:].strip().split(" ", 1)
-                    if len(parts) == 2:
-                        cmd_write(parts[0], parts[1])
-                    else:
-                        print("用法: write <文件名> <内容>")
-                elif command.startswith("rm "):
-                    filename = command[3:].strip()
-                    if filename:
-                        cmd_rm(filename)
-                    else:
-                        print("用法: rm <文件名>")
-                elif command.startswith("mkdir "):
-                    filename = command[6:].strip()
-                    if filename:
-                        cmd_mkdir(filename)
-                    else:
-                        print("用法: mkdir <文件夹名>")
-                elif command.startswith("cd "):
-                    dirname = command[3:].strip()
-                    if dirname:
-                        cmd_cd(dirname)
-                    else:
-                        print("用法: cd <文件夹名>")
-                elif command.startswith("add_user "):
-                    parts = command[9:].strip().split(" ", 1)
-                    if len(parts) == 2:
-                        cmd_add_user(parts[0], parts[1])
-                        user_list = load_users()
-                    else:
-                        print("用法: add_user <用户名> <密码>")
-                elif command == "":
-                    continue
-                else:
-                    print(f"❌ 未知命令: {command}")
-
+            show_loading_animation()
+            return user_name
         else:
             print("❌ 用户名或密码错误，请重新输入！")
 
+def start_shell(user_name):
+    """
+    启动 Shell 交互界面。
+    参数:
+        user_name: 当前登录的用户名
+    返回:
+        bool: True 表示用户请求登出（返回登录页），False 表示用户请求退出程序
+    """
+    # 登录成功后，重置当前目录为根目录
+    # 注意：这里修改的是 state 模块中的全局变量
+    state._current_dir = ""
+    
+    running = True
+    while running:
+        try:
+            # 构建命令提示符
+            prompt_path = f"/{state._current_dir}" if state._current_dir else "/"
+            raw_input = input(f"{user_name}@ccc:{prompt_path}> ")
+            
+            if not raw_input:
+                continue
+            
+            # 解析命令和参数
+            parts = raw_input.strip().split(maxsplit=1)
+            cmd = parts[0].lower()
+            args = parts[1] if len(parts) > 1 else ""
 
-if __name__ == "__main__":
+            # --- 命令分发逻辑 ---
+            
+            if cmd == "exit":
+                print("👋 Shutting down the program...")
+                return False  # 退出程序
+
+            elif cmd == "logout":
+                print("📤 登出，返回登录页面...")
+                return True   # 返回登录页
+
+            elif cmd == "help":
+                commant.cmd_help()
+
+            elif cmd == "ls":
+                commant.cmd_ls()
+
+            elif cmd == "pwd":
+                commant.cmd_pwd()
+
+            elif cmd == "clear":
+                commant.cmd_clear()
+
+            elif cmd == "touch":
+                if args:
+                    commant.cmd_touch(args.strip())
+                else:
+                    print("用法: touch <文件名>")
+
+            elif cmd == "cat":
+                if args:
+                    commant.cmd_cat(args.strip())
+                else:
+                    print("用法: cat <文件名>")
+
+            elif cmd == "write":
+                # write 命令格式: write <filename> <content>
+                if args:
+                    write_parts = args.strip().split(maxsplit=1)
+                    if len(write_parts) == 2:
+                        commant.cmd_write(write_parts[0], write_parts[1])
+                    else:
+                        print("用法: write <文件名> <内容>")
+                else:
+                    print("用法: write <文件名> <内容>")
+
+            elif cmd == "rm":
+                if args:
+                    commant.cmd_rm(args.strip())
+                else:
+                    print("用法: rm <文件名/文件夹名>")
+
+            elif cmd == "mkdir":
+                if args:
+                    commant.cmd_mkdir(args.strip())
+                else:
+                    print("用法: mkdir <文件夹名>")
+
+            elif cmd == "cd":
+                if args:
+                    commant.cmd_cd(args.strip())
+                else:
+                    # cd 无参数默认回到根目录
+                    state._current_dir = ""
+                    print("✅ 已切换到根目录: /")
+
+            elif cmd == "add_user":
+                if args:
+                    user_parts = args.strip().split(maxsplit=1)
+                    if len(user_parts) == 2:
+                        commant.cmd_add_user(user_parts[0], user_parts[1])
+                    else:
+                        print("用法: add_user <用户名> <密码>")
+                else:
+                    print("用法: add_user <用户名> <密码>")
+
+            else:
+                print(f"❌ 未知命令: '{cmd}'。输入 'help' 查看可用命令。")
+
+        except KeyboardInterrupt:
+            print("\n⚠️ 检测到中断信号 (Ctrl+C)")
+            confirm = input("确定要退出程序吗? (y/n): ").strip().lower()
+            if confirm == 'y':
+                return False
+            else:
+                continue
+        except Exception as e:
+            print(f"\n💥 发生未知错误: {e}")
+            # 调试时可取消下面注释查看堆栈
+            # import traceback; traceback.print_exc()
+
+def main():
+    """程序主入口"""
     try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n⚠️ 程序被手动中断，退出")
+        # 1. 初始化系统环境
+        init_system()
+        
+        # 2. 主循环：处理登录 -> Shell -> 登出/退出
+        while True:
+            user_name = handle_login()
+            if user_name is None:
+                break
+            
+            # 进入 Shell，根据返回值决定是重新登录还是彻底退出
+            should_logout = start_shell(user_name)
+            if not should_logout:
+                break
+                
     except Exception as e:
         print(f"\n💥 全局异常: {e}")
-        print(f"捕获异常：", e)
-        input("按回车关闭窗口")
+        import traceback
+        traceback.print_exc()
+        input("按回车键退出...")
+
+if __name__ == "__main__":
+    main()
